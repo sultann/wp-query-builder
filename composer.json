@@ -2,6 +2,7 @@
     "name": "sultann/wp-query-builder",
     "description": "WP Query Builder is a lightweight and efficient SQL Query Builder based on wpdb for WordPress. It supports complicated query generation.",
     "license": "MIT",
+    "type": "library",
     "keywords": [
         "wordpress",
         "query builder",
