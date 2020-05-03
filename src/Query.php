@@ -6,7 +6,7 @@ defined( 'ABSPATH' ) || exit();
 
 use Exception;
 
-class Query{
+class Query {
 
 	/**
 	 * @var array
@@ -91,7 +91,7 @@ class Query{
 	 * @param string $from
 	 * @param bool $add_prefix Should DB prefix be added.
 	 *
-	 * @return QueryBuilder this for chaining.
+	 * @return Query this for chaining.
 	 * @global object $wpdb
 	 *
 	 * @since 1.0.0
@@ -125,6 +125,7 @@ class Query{
 				];
 			}
 		}
+
 		return $this;
 	}
 
@@ -143,7 +144,7 @@ class Query{
 	 * @param mixed $param2 The value if $param1 is an operator.
 	 * @param string $joint the where type ( and, or )
 	 *
-	 * @return QueryBuilder The current query builder.
+	 * @return Query The current query builder.
 	 */
 	public function where( $column, $param1 = null, $param2 = null, $joint = 'and' ) {
 		global $wpdb;
@@ -154,7 +155,7 @@ class Query{
 		// when column is an array we assume to make a bulk and where.
 		if ( is_array( $column ) ) {
 			// create new query object
-			$subquery = new QueryBuilder();
+			$subquery = new Query();
 			foreach ( $column as $key => $val ) {
 				$subquery->where( $key, $val, null, $joint );
 			}
@@ -166,7 +167,7 @@ class Query{
 
 		if ( is_object( $column ) && ( $column instanceof \Closure ) ) {
 			// create new query object
-			$subquery = new QueryBuilder();
+			$subquery = new Query();
 
 			// run the closure callback on the sub query
 			call_user_func_array( $column, array( &$subquery ) );
@@ -243,9 +244,9 @@ class Query{
 		//if not null does it contains . it could be column so dont parse as string
 		//If not column then use wpdb prepare
 		$param2 = is_array( $param2 ) ? ( '(' . implode( ',', $param2 ) . ')' ) : ( $param2 === null
-				? 'null'
-				: (strpos($param2, '.') !== false ? $param2 : $wpdb->prepare( is_numeric( $param2 ) ? '%d' : '%s', $param2 ))
-			);
+			? 'null'
+			: ( strpos( $param2, '.' ) !== false ? $param2 : $wpdb->prepare( is_numeric( $param2 ) ? '%d' : '%s', $param2 ) )
+		);
 
 		$this->where[] = [
 			'joint'     => $joint,
@@ -265,7 +266,7 @@ class Query{
 	 * @param mixed $param1
 	 * @param mixed $param2
 	 *
-	 * @return QueryBuilder The current query builder.
+	 * @return Query The current query builder.
 	 */
 	public function orWhere( $column, $param1 = null, $param2 = null ) {
 		return $this->where( $column, $param1, $param2, 'or' );
@@ -280,7 +281,7 @@ class Query{
 	 * @param mixed $param1
 	 * @param mixed $param2
 	 *
-	 * @return QueryBuilder The current query builder.
+	 * @return Query The current query builder.
 	 */
 	public function andWhere( $column, $param1 = null, $param2 = null ) {
 		return $this->where( $column, $param1, $param2, 'and' );
@@ -294,7 +295,7 @@ class Query{
 	 * @param string $column
 	 * @param array $options
 	 *
-	 * @return QueryBuilder The current query builder.
+	 * @return Query The current query builder.
 	 */
 	public function whereIn( $column, array $options = array() ) {
 		// when the options are empty we skip
@@ -313,7 +314,7 @@ class Query{
 	 * @param string $column
 	 * @param array $options
 	 *
-	 * @return QueryBuilder The current query builder.
+	 * @return Query The current query builder.
 	 */
 	public function whereNotIn( $column, array $options = array() ) {
 		// when the options are empty we skip
@@ -331,7 +332,7 @@ class Query{
 	 *
 	 * @param string $column
 	 *
-	 * @return QueryBuilder The current query builder.
+	 * @return Query The current query builder.
 	 */
 	public function whereNull( $column ) {
 		return $this->where( $column, 'is', null );
@@ -344,7 +345,7 @@ class Query{
 	 *
 	 * @param string $column
 	 *
-	 * @return QueryBuilder The current query builder.
+	 * @return Query The current query builder.
 	 */
 	public function whereNotNull( $column ) {
 		return $this->where( $column, 'is not', null );
@@ -357,7 +358,7 @@ class Query{
 	 *
 	 * @param string $column
 	 *
-	 * @return QueryBuilder The current query builder.
+	 * @return Query The current query builder.
 	 */
 	public function orWhereNull( $column ) {
 		return $this->orWhere( $column, 'is', null );
@@ -370,7 +371,7 @@ class Query{
 	 *
 	 * @param string $column
 	 *
-	 * @return QueryBuilder The current query builder.
+	 * @return Query The current query builder.
 	 */
 	public function orWhereNotNull( $column ) {
 		return $this->orWhere( $column, 'is not', null );
@@ -384,7 +385,7 @@ class Query{
 	 *
 	 * @param string $column
 	 *
-	 * @return QueryBuilder The current query builder.
+	 * @return Query The current query builder.
 	 */
 	public function whereBetween( $column, $min, $max ) {
 		return $this->where( $column, 'BETWEEN', array( $min, $max ) );
@@ -397,7 +398,7 @@ class Query{
 	 *
 	 * @param string $column
 	 *
-	 * @return QueryBuilder The current query builder.
+	 * @return Query The current query builder.
 	 */
 	public function whereNotBetween( $column, $min, $max ) {
 		return $this->where( $column, 'NOT BETWEEN', array( $min, $max ) );
@@ -410,7 +411,7 @@ class Query{
 	 *
 	 * @param string $column
 	 *
-	 * @return QueryBuilder The current query builder.
+	 * @return Query The current query builder.
 	 */
 	public function whereDateBetween( $column, $start, $end ) {
 		global $wpdb;
@@ -433,7 +434,7 @@ class Query{
 	 * @param string $joint The join AND or Or
 	 * @param bool $add_prefix Add table prefix or not
 	 *
-	 * @return QueryBuilder The current query builder.
+	 * @return Query The current query builder.
 	 */
 	public function join( $table, $localKey, $operator = null, $referenceKey = null, $type = 'left', $joint = 'AND', $add_prefix = true ) {
 		global $wpdb;
@@ -452,7 +453,7 @@ class Query{
 		// which will create a new query where you can add your nested where
 		if ( is_object( $localKey ) && ( $localKey instanceof \Closure ) ) {
 			//create new query object
-			$subquery = new QueryBuilder();
+			$subquery = new Query();
 			// run the closure callback on the sub query
 			call_user_func_array( $localKey, array( &$subquery ) );
 
@@ -486,7 +487,7 @@ class Query{
 	 * @param string $operator The operator (=, !=, <, > etc.)
 	 * @param string $referenceKey
 	 *
-	 * @return QueryBuilder The current query builder.
+	 * @return Query The current query builder.
 	 */
 	public function leftJoin( $table, $localKey, $operator = null, $referenceKey = null ) {
 		return $this->join( $table, $localKey, $operator, $referenceKey, 'left' );
@@ -500,7 +501,7 @@ class Query{
 	 * @param string $operator The operator (=, !=, <, > etc.)
 	 * @param string $referenceKey
 	 *
-	 * @return QueryBuilder The current query builder.
+	 * @return Query The current query builder.
 	 */
 	public function rightJoin( $table, $localKey, $operator = null, $referenceKey = null ) {
 		return $this->join( $table, $localKey, $operator, $referenceKey, 'right' );
@@ -514,7 +515,7 @@ class Query{
 	 * @param string $operator The operator (=, !=, <, > etc.)
 	 * @param string $referenceKey
 	 *
-	 * @return QueryBuilder The current query builder.
+	 * @return Query The current query builder.
 	 */
 	public function innerJoin( $table, $localKey, $operator = null, $referenceKey = null ) {
 		return $this->join( $table, $localKey, $operator, $referenceKey, 'inner' );
@@ -528,7 +529,7 @@ class Query{
 	 * @param string $operator The operator (=, !=, <, > etc.)
 	 * @param string $referenceKey
 	 *
-	 * @return QueryBuilder The current query builder.
+	 * @return Query The current query builder.
 	 */
 	public function outerJoin( $table, $localKey, $operator = null, $referenceKey = null ) {
 		return $this->join( $table, $localKey, $operator, $referenceKey, 'outer' );
@@ -542,7 +543,7 @@ class Query{
 	 *
 	 * @param string $field
 	 *
-	 * @return QueryBuilder this for chaining.
+	 * @return Query this for chaining.
 	 * @since 1.0.0
 	 *
 	 */
@@ -570,7 +571,7 @@ class Query{
 	 *
 	 * @param string $statement
 	 *
-	 * @return QueryBuilder this for chaining.
+	 * @return Query this for chaining.
 	 * @since 1.0.0
 	 *
 	 */
@@ -591,7 +592,7 @@ class Query{
 	 * @param string $key
 	 * @param string $direction
 	 *
-	 * @return QueryBuilder this for chaining.
+	 * @return Query this for chaining.
 	 * @throws Exception
 	 * @since 1.0.0
 	 *
@@ -620,7 +621,7 @@ class Query{
 	 * @param int $limit
 	 * @param int $limit2
 	 *
-	 * @return QueryBuilder The current query builder.
+	 * @return Query The current query builder.
 	 */
 	public function limit( $limit, $limit2 = null ) {
 		if ( ! is_null( $limit2 ) ) {
@@ -640,7 +641,7 @@ class Query{
 	 *
 	 * @param int $offset
 	 *
-	 * @return QueryBuilder this for chaining.
+	 * @return Query this for chaining.
 	 *
 	 */
 	public function offset( $offset ) {
@@ -658,7 +659,7 @@ class Query{
 	 * @param int $page
 	 * @param int $size
 	 *
-	 * @return QueryBuilder The current query builder.
+	 * @return Query The current query builder.
 	 * @since 1.0.0
 	 */
 	public function page( $page, $size = 20 ) {
@@ -715,7 +716,7 @@ class Query{
 	 * @param callable $row_map Function callable to filter or map results to.
 	 * @param bool $calc_rows Flag that indicates to SQL if rows should be calculated or not.
 	 *
-	 * @return Collection
+	 * @return Object || Array
 	 * @since 1.0.0
 	 *
 	 * @global object $wpdb
@@ -741,8 +742,8 @@ class Query{
 				return call_user_func_array( $row_map, [ $row ] );
 			}, $results );
 		}
-		$collection = new Collection;
-		return $collection[] = $results;
+
+		return $results;
 	}
 
 	/**
