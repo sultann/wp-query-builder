@@ -1,0 +1,25 @@
+{
+    "name": "sultann/wp-query-builder",
+    "description": "WP Query Builder is a lightweight and efficient SQL Query Builder based on wpdb for WordPress. It supports complicated query generation.",
+    "license": "MIT",
+    "keywords": [
+        "wordpress",
+        "query builder",
+        "database"
+    ],
+    "authors": [
+        {
+            "name": "MD Sultan Nasir Uddin",
+            "email": "manikdrmc@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "PluginEver\\QueryBuilder\\": "src"
+        }
+    },
+    "minimum-stability": "dev"
+}
