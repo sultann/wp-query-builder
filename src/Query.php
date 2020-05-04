@@ -463,10 +463,17 @@ class Query {
 			return $this;
 		}
 
+		// when param2 is null we replace param2 with param one as the
+		// value holder and make param1 to the = operator.
+		if ( is_null( $referenceKey ) ) {
+			$referenceKey = $operator;
+			$operator = '=';
+		}
+
 		$referenceKey = is_array( $referenceKey ) ? ( '(\'' . implode( '\',\'', $referenceKey ) . '\')' )
 			: ( $referenceKey === null
 				? 'null'
-				: $wpdb->prepare( is_numeric( $referenceKey ) ? '%d' : '%s', $referenceKey )
+				: ( strpos( $referenceKey, '.' ) !== false ? $referenceKey : $wpdb->prepare( is_numeric( $referenceKey ) ? '%d' : '%s', $referenceKey ) )
 			);
 
 		$join['on'][] = [
@@ -663,7 +670,7 @@ class Query {
 	 * @since 1.0.0
 	 */
 	public function page( $page, $size = 20 ) {
-		if ( ( $page = (int) $page ) < 0 ) {
+		if ( ( $page = (int) $page ) <= 1 ) {
 			$page = 0;
 		}
 
