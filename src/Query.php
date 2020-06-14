@@ -4,9 +4,11 @@ namespace PluginEver\QueryBuilder;
 
 defined( 'ABSPATH' ) || exit();
 
-use Exception;
-
 class Query {
+	/**
+	 * @var string
+	 */
+	protected $id;
 
 	/**
 	 * @var array
@@ -56,17 +58,13 @@ class Query {
 	/**
 	 * Static constructor.
 	 *
-	 * @param string $name
-	 * @param bool $add_prefix
 	 *
 	 * @since 1.0.0
 	 *
 	 */
-	public static function table( $name, $add_prefix = true ) {
-		global $wpdb;
-		$table         = ( $add_prefix ? $wpdb->prefix : '' ) . $name;
-		$builder       = new self();
-		$builder->from = $table;
+	public static function init( $id = null ) {
+		$builder     = new self();
+		$builder->id = ! empty( $id ) ? $id : uniqid();
 
 		return $builder;
 	}
@@ -81,6 +79,23 @@ class Query {
 	 */
 	public function select( $statement ) {
 		$this->select[] = $statement;
+
+		return $this;
+	}
+
+	/**
+	 * Adds from statement.
+	 *
+	 * @param string $name
+	 * @param bool $add_prefix
+	 *
+	 * @since 1.0.0
+	 *
+	 */
+	public function table( $name, $add_prefix = true ) {
+		global $wpdb;
+		$table      = ( $add_prefix ? $wpdb->prefix : '' ) . $name;
+		$this->from = $table;
 
 		return $this;
 	}
@@ -109,16 +124,17 @@ class Query {
 	 *
 	 * @param $search
 	 * @param $columns
+	 * @param $joint
 	 *
 	 * @since 1.0.0
 	 */
-	public function search( $search, $columns ) {
+	public function search( $search, $columns, $joint = 'AND' ) {
 		if ( ! empty( $search ) ) {
 			global $wpdb;
 			foreach ( explode( ' ', $search ) as $word ) {
 				$word          = '%' . $this->sanitize_value( true, $word ) . '%';
 				$this->where[] = [
-					'joint'     => 'AND',
+					'joint'     => $joint,
 					'condition' => '(' . implode( ' OR ', array_map( function ( $column ) use ( &$wpdb, &$word ) {
 							return $wpdb->prepare( $column . ' LIKE %s', $word );
 						}, $columns ) ) . ')',
@@ -243,9 +259,12 @@ class Query {
 		//if not array but null then set value as null
 		//if not null does it contains . it could be column so dont parse as string
 		//If not column then use wpdb prepare
-		$param2 = is_array( $param2 ) ? ( '(' . implode( ',', $param2 ) . ')' ) : ( $param2 === null
+		//if contains $prefix
+		$contain_join = preg_replace( '/^(\s?AND ?|\s?OR ?)|\s$/i', '', $param2 );
+
+		$param2 = is_array( $param2 ) ? ( '("' . implode( '","', $param2 ) . '")' ) : ( $param2 === null
 			? 'null'
-			: ( strpos( $param2, '.' ) !== false ? $param2 : $wpdb->prepare( is_numeric( $param2 ) ? '%d' : '%s', $param2 ) )
+			: ( strpos( $param2, '.' ) !== false || strpos( $param2, $wpdb->prefix ) !== false ? $param2 : $wpdb->prepare( is_numeric( $param2 ) ? '%d' : '%s', $param2 ) )
 		);
 
 		$this->where[] = [
@@ -309,7 +328,7 @@ class Query {
 	/**
 	 * Creates a where not in statement
 	 *
-	 *     ->whereIn('id', [42, 38, 12])
+	 *     ->whereNotIn('id', [42, 38, 12])
 	 *
 	 * @param string $column
 	 * @param array $options
@@ -421,6 +440,24 @@ class Query {
 		return $this->where( $column, 'BETWEEN', array( $stat_date, $end_date ) );
 	}
 
+
+	/**
+	 *
+	 * @param $query
+	 * @param string $joint
+	 *
+	 * @since 1.0.1
+	 */
+	public function whereRaw( $query, $joint = 'AND' ) {
+		$this->where[] = [
+			'joint'     => $joint,
+			'condition' => $query,
+		];
+
+		return $this;
+	}
+
+
 	/**
 	 * Add a join statement to the current query
 	 *
@@ -466,7 +503,7 @@ class Query {
 		$referenceKey = is_array( $referenceKey ) ? ( '(\'' . implode( '\',\'', $referenceKey ) . '\')' )
 			: ( $referenceKey === null
 				? 'null'
-				: $wpdb->prepare( is_numeric( $referenceKey ) ? '%d' : '%s', $referenceKey )
+				: ( strpos( $referenceKey, '.' ) !== false || strpos( $referenceKey, $wpdb->prefix ) !== false ? $referenceKey : $wpdb->prepare( is_numeric( $referenceKey ) ? '%d' : '%s', $referenceKey ) )
 			);
 
 		$join['on'][] = [
@@ -533,6 +570,22 @@ class Query {
 	 */
 	public function outerJoin( $table, $localKey, $operator = null, $referenceKey = null ) {
 		return $this->join( $table, $localKey, $operator, $referenceKey, 'outer' );
+	}
+
+	/**
+	 *
+	 * @param $query
+	 * @param string $joint
+	 *
+	 * @since 1.0.1
+	 */
+	public function joinRaw( $query, $joint = 'AND' ) {
+		$this->join['on'][] = [
+			'joint'     => $joint,
+			'condition' => $query,
+		];
+
+		return $this;
 	}
 
 
@@ -663,7 +716,7 @@ class Query {
 	 * @since 1.0.0
 	 */
 	public function page( $page, $size = 20 ) {
-		if ( ( $page = (int) $page ) < 0 ) {
+		if ( ( $page = (int) $page ) <= 1 ) {
 			$page = 0;
 		}
 
@@ -710,6 +763,20 @@ class Query {
 	}
 
 	/**
+	 * Pluck item.
+	 * ->find('post_title')
+	 * @return Object
+	 * @since 1.0.1
+	 */
+	public function pluck() {
+		$selects      = func_get_args();
+		$this->select = $selects;
+
+		return $this->get();
+	}
+
+
+	/**
 	 * Returns results from builder statements.
 	 *
 	 * @param int $output WPDB output type.
@@ -724,6 +791,8 @@ class Query {
 	 */
 	public function get( $output = OBJECT, $row_map = null, $calc_rows = false ) {
 		global $wpdb;
+		do_action( 'wp_query_builder_get_builder', $this );
+		do_action( 'wp_query_builder_get_builder_' . $this->id, $this );
 
 		$query = '';
 		$this->_query_select( $query, $calc_rows );
@@ -735,7 +804,11 @@ class Query {
 		$this->_query_order( $query );
 		$this->_query_limit( $query );
 		$this->_query_offset( $query );
+
 		// Process
+		$query = apply_filters( 'wp_query_builder_get_query', $query );
+		$query = apply_filters( 'wp_query_builder_get_query_' . $this->id, $query );
+
 		$results = $wpdb->get_results( $query, $output );
 		if ( $row_map ) {
 			$results = array_map( function ( $row ) use ( &$row_map ) {
@@ -755,6 +828,9 @@ class Query {
 	 */
 	public function one( $output = OBJECT ) {
 		global $wpdb;
+		do_action( 'wp_query_builder_one_builder', $this );
+		do_action( 'wp_query_builder_one_builder_' . $this->id, $this );
+
 		$this->_query_select( $query );
 		$this->_query_from( $query );
 		$this->_query_join( $query );
@@ -764,6 +840,9 @@ class Query {
 		$this->_query_order( $query );
 		$query .= ' LIMIT 1';
 		$this->_query_offset( $query );
+
+		$query = apply_filters( 'wp_query_builder_one_query', $query );
+		$query = apply_filters( 'wp_query_builder_one_query_' . $this->id, $query );
 
 		return $wpdb->get_row( $query, $output );
 	}
@@ -777,6 +856,9 @@ class Query {
 	 */
 	public function count( $column = 1 ) {
 		global $wpdb;
+		do_action( 'wp_query_builder_count_builder', $this );
+		do_action( 'wp_query_builder_count_builder_' . $this->id, $this );
+
 		$query = 'SELECT count(' . $column . ') as `count`';
 		$this->_query_from( $query );
 		$this->_query_join( $query );
@@ -790,13 +872,16 @@ class Query {
 	/**
 	 * Just get a single value from the result
 	 *
-	 * @param string $column The name of the column.
+	 * @param string $column The index of the column.
 	 * @param bool $calc_rows Flag that indicates to SQL if rows should be calculated or not.
 	 *
 	 * @return mixed The columns value
 	 */
-	public function column( $column, $calc_rows = false ) {
+	public function column( $column = 0, $calc_rows = false ) {
 		global $wpdb;
+		do_action( 'wp_query_builder_column_builder', $this );
+		do_action( 'wp_query_builder_column_builder_' . $this->id, $this );
+
 		$query = '';
 		$this->_query_select( $query, $calc_rows );
 		$this->_query_from( $query );
@@ -809,6 +894,150 @@ class Query {
 		$this->_query_offset( $query );
 
 		return $wpdb->get_col( $query, $column );
+	}
+
+	/**
+	 * Returns a value.
+	 *
+	 * @param int $x Column of value to return. Indexed from 0.
+	 * @param int $y Row of value to return. Indexed from 0.
+	 *
+	 * @return mixed
+	 * @global object $wpdb
+	 *
+	 * @since 1.0.0
+	 *
+	 */
+	public function value( $x = 0, $y = 0 ) {
+		global $wpdb;
+		do_action( 'wp_query_builder_value_builder', $this );
+		do_action( 'wp_query_builder_value_builder_' . $this->id, $this );
+
+		// Build
+		// Query
+		$query = '';
+		$this->_query_select( $query );
+		$this->_query_from( $query );
+		$this->_query_join( $query );
+		$this->_query_where( $query );
+		$this->_query_group( $query );
+		$this->_query_having( $query );
+		$this->_query_order( $query );
+		$this->_query_limit( $query );
+		$this->_query_offset( $query );
+
+		return $wpdb->get_var( $query, $x, $y );
+	}
+
+
+	/**
+	 * Update or insert.
+	 *
+	 * @param $data
+	 *
+	 * @return array|string
+	 */
+	public function updateOrInsert( $data ) {
+		if ( $this->first() ) {
+			return $this->update( $data );
+		} else {
+			return $this->insert( $data );
+		}
+	}
+
+	/**
+	 * Find or insert.
+	 *
+	 * @param $data
+	 *
+	 * @return array|string
+	 */
+	public function findOrInsert( $data ) {
+		if ( $this->first() ) {
+			return $this->update( $data );
+		} else {
+			return $this->insert( $data );
+		}
+	}
+
+	/**
+	 * Get max value.
+	 *
+	 * @param $column
+	 *
+	 * @return int
+	 * @since 1.0.1
+	 */
+	public function max( $column ) {
+		global $wpdb;
+		$query = 'SELECT MAX(' . $column . ')';
+		$this->_query_from( $query );
+		$this->_query_join( $query );
+		$this->_query_where( $query );
+		$this->_query_group( $query );
+		$this->_query_having( $query );
+
+		return intval( $wpdb->get_var( $query ) );
+	}
+
+	/**
+	 * Get min value.
+	 *
+	 * @param $column
+	 *
+	 * @return int
+	 * @since 1.0.1
+	 */
+	public function min( $column ) {
+		global $wpdb;
+		$query = 'SELECT MIN(' . $column . ')';
+		$this->_query_from( $query );
+		$this->_query_join( $query );
+		$this->_query_where( $query );
+		$this->_query_group( $query );
+		$this->_query_having( $query );
+
+		return intval( $wpdb->get_var( $query ) );
+	}
+
+	/**
+	 * Get avg value.
+	 *
+	 * @param $column
+	 *
+	 * @return int
+	 * @since 1.0.1
+	 */
+	public function avg( $column ) {
+		global $wpdb;
+		$query = 'SELECT AVG(' . $column . ')';
+		$this->_query_from( $query );
+		$this->_query_join( $query );
+		$this->_query_where( $query );
+		$this->_query_group( $query );
+		$this->_query_having( $query );
+
+		return intval( $wpdb->get_var( $query ) );
+	}
+
+	/**
+	 * Get sum value.
+	 *
+	 * @param $column
+	 *
+	 * @return int
+	 * @since 1.0.1
+	 */
+	public function sum( $column ) {
+		global $wpdb;
+		$query = 'SELECT SUM(' . $column . ')';
+		$this->_query_from( $query );
+		$this->_query_join( $query );
+		$this->_query_where( $query );
+		$this->_query_group( $query );
+		$this->_query_having( $query );
+
+		return intval( $wpdb->get_var( $query ) );
 	}
 
 	/**
@@ -862,15 +1091,36 @@ class Query {
 	}
 
 	/**
+	 * Returns found rows in last query, if SQL_CALC_FOUND_ROWS is used and is supported.
+	 * @return array
+	 * @global object $wpdb
+	 *
+	 * @since 1.0.0
+	 *
+	 */
+	public function rows_found() {
+		global $wpdb;
+		$query = 'SELECT FOUND_ROWS()';
+		// Process
+		$query = apply_filters( 'wp_query_builder_found_rows_query', $query );
+		$query = apply_filters( 'wp_query_builder_found_rows_query_' . $this->id, $query );
+
+		return $wpdb->get_var( $query );
+	}
+
+	/**
 	 * Returns flag indicating if delete query has been executed.
 	 * @return bool
 	 * @global object $wpdb
 	 *
-	 * @since 1.0.8
+	 * @since 1.0.0
 	 *
 	 */
 	public function delete() {
 		global $wpdb;
+		do_action( 'wp_query_builder_delete_builder', $this );
+		do_action( 'wp_query_builder_delete_builder_' . $this->id, $this );
+
 		$query = '';
 		$this->_query_delete( $query );
 		$this->_query_from( $query );
@@ -880,6 +1130,70 @@ class Query {
 		return $wpdb->query( $query );
 	}
 
+	/**
+	 * Update
+	 * @return bool
+	 * @global object $wpdb
+	 *
+	 * @since 1.0.0
+	 *
+	 */
+	public function update( $data ) {
+		global $wpdb;
+		$conditions = '';
+		$this->_query_where( $conditions );
+
+		if ( empty( trim( $conditions ) ) ) {
+			false;
+		}
+
+		$fields = array();
+		foreach ( $data as $column => $value ) {
+
+			if ( is_null( $value ) ) {
+				$fields[] = "`$column` = NULL";
+				continue;
+			}
+
+			$fields[] = "`$column` = " . $wpdb->prepare( is_numeric( $value ) ? '%d' : '%s', $value );
+		}
+
+		$table  = trim( $this->from );
+		$fields = implode( ', ', $fields );
+
+		$query = "UPDATE `$table` SET $fields  $conditions";
+
+		return $wpdb->query( $query );
+	}
+
+	/**
+	 * Insert data.
+	 *
+	 * @param $data
+	 * @param array $format
+	 *
+	 * @return bool|int
+	 * @since 1.0.1
+	 */
+	public function insert( $data, $format = array() ) {
+		global $wpdb;
+
+		if ( false !== $wpdb->insert( trim( $this->from ), $data, $format ) ) {
+			return $wpdb->insert_id;
+		};
+
+		return false;
+	}
+
+	/**
+	 * Return a cloned object from current builder.
+	 *
+	 * @return Query
+	 * @since 1.0.0
+	 */
+	public function copy() {
+		return clone( $this );
+	}
 
 	/**
 	 * Builds query's select statement.
@@ -1071,11 +1385,10 @@ class Query {
 	/**
 	 * @param $message
 	 *
-	 * @throws Exception
+	 * @throws \Exception
 	 * @since 1.0.0
 	 */
 	private function exception( $message ) {
-		throw new Exception( $message );
+		throw new \Exception( $message );
 	}
-
 }

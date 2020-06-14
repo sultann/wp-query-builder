@@ -20,35 +20,46 @@ $ composer require sultann/wp-query-builder
 ```
 
 ## Documentation 💡
+### Initialize
+Initialize query builder. init method takes a string argument using that later you can do action/filter based on your requirement.
+without argument
+```php
+$query = \PluginEver\QueryBuilder\Query::init();
+```
+with argument
+```php
+$query = \PluginEver\QueryBuilder\Query::init('query_users');
+```
 
 ### Select
 This will build the query, execute and returns all users from users table with applying table prefix automatically.
 by default it select all(*) but you can define what to select from the query;
 ```php
-$results = \PluginEver\QueryBuilder\Query::table('users')
-                                           ->get();
+$results = $query->select('*')
+                 ->from('users')
+                 ->get();
 ```
 Select specific column
 ```php
-$results = \PluginEver\QueryBuilder\Query::table('users')
-                                           ->select('user_login')
-                                           ->get();
+$results = $query->select('ID')
+                 ->from('users')
+                 ->get();
 ```
 Select multiple column
 ```php
-$results = \PluginEver\QueryBuilder\Query::table('users')
-                                           ->select('user_login, user_email')
-                                           ->get();
+$results = $query->select('user_login, user_email')
+                 ->from('users')
+                 ->get();
 ```
 
 
 ### Where conditions
 For the next few examples, lets assume a larger dataset so that the queries make sense.
 ```php
-$results = \PluginEver\QueryBuilder\Query::table('users')
-                                           ->where('user_url', '')
-                                           ->where('user_email', 'like', '%gmail.com')
-                                           ->get();
+$results = $query->select('*')
+                 ->from('users')
+                 ->where('user_email', 'like', '%gmail.com')
+                 ->get();
 ```
 Notice how omitting the operator in the first condition ->where('user_url', '') makes this default to =.
 By default all where conditions are defined with the and operator.
@@ -56,11 +67,11 @@ By default all where conditions are defined with the and operator.
 Different where operators:
 
 ```php
-$results = \PluginEver\QueryBuilder\Query::table('users')
-                                           ->where('user_url', '')
-                                           ->where('user_email', 'like', '%gmail.com')
-                                           ->orWhere('user_email', 'like', '%yahoo.com')
-                                           ->get();
+$results = $query->select('*')
+                 ->from('users')
+                 ->where('user_email', 'like', '%gmail.com')
+                 ->orWhere('user_email', 'like', '%yahoo.com')
+                 ->get();
 ```
 
 There are few more builtin Where conditions available
@@ -74,62 +85,69 @@ There are few more builtin Where conditions available
 - `whereBetween()`
 - `whereNotBetween()`
 - `whereDateBetween()`
+- `whereRaw()`
 
 #### Where scopes
 Allow you to group conditions:
 
 ```php
-$results = \PluginEver\QueryBuilder\Query::table('posts')
-                                        ->where('post_status', 'publish')
-                                        ->where(function($q) 
-                                        {
-                                            $q->where('menu_order', '>', 21);
-                                            $q->where('menu_order', '<', 99);
-                                        })
-                                        ->orWhere('post_type', 'page')
-                                        ->get();
+$results = $query->select('*')
+                 ->from('posts')
+                ->where('post_status', 'publish')
+                ->where(function($q) 
+                {
+                    $q->where('menu_order', '>', 21);
+                    $q->where('menu_order', '<', 99);
+                })
+                ->orWhere('post_type', 'page')
+                ->get();
 ```
 
 Where Between
 ```php
-$results = \PluginEver\QueryBuilder\Query::table('posts')
-                                        ->whereBetween('menu_order', 1, 20)
-                                        ->get();
+$results = $query->select('*')
+                 ->from('posts')
+                 ->whereBetween('menu_order', 1, 20)
+                 ->get();
 ```
 
 Where Not Between
 ```php
-$results = \PluginEver\QueryBuilder\Query::table('posts')
-                                        ->whereNotBetween('menu_order', 20, 30)
-                                        ->get();
+$results = $query->select('*')
+                 ->from('posts')
+                 ->whereNotBetween('menu_order', 20, 30)
+                 ->get();
 ```
 
 Where Date Between
 ```php
-$results = \PluginEver\QueryBuilder\Query::table('posts')
-                                        ->whereDateBetween('post_date',  '2010-04-22 10:16:21', '2020-05-04')
-                                        ->get();
+$results = $query->select('*')
+                 ->from('posts')
+                 ->whereDateBetween('post_date',  '2010-04-22 10:16:21', '2020-05-04')
+                 ->get();
 ```
 
 ### Joins
 By default, all joins are Left Join. Available join types 'LEFT', 'RIGHT', 'INNER', 'CROSS', 'LEFT OUTER', 'RIGHT OUTER'
 Joining tables:
 ```php
-$results = \PluginEver\QueryBuilder\Query::table('posts as p')
-                                        ->join('users as u',  'p.post_author', 'u.ID')
-                                        ->get();
+$results = $query->select( '*' )
+                ->from( 'posts p' )
+                ->join( 'users u', 'u.ID', '=','p.post_author' )
+                ->get();
 ```
 
 #### Joins scopes
 Allow you to group conditions:
 ```php
-$results = \PluginEver\QueryBuilder\Query::table('posts as p')
-                                        ->join('users as u',  'p.post_author', 'u.ID')
-                                        ->join('usermeta um', function($q) {
-                                              $q->where('um.meta_key', 'first_name');
-                                              $q->where('um.met_value', 'like', '%sultan%');
-                                          })
-                                        ->get();
+$results = $query->select( '*' )
+                ->from( 'posts p' )
+                ->join( 'users u', 'u.ID', '=','p.post_author' )
+                ->join('usermeta um', function($q) {
+                      $q->where('um.meta_key', 'first_name');
+                      $q->where('um.met_value', 'like', '%sultan%');
+                  })
+                ->get();
 ```
 There are few more builtin join conditions available
 - `leftJoin()`
@@ -147,112 +165,131 @@ There are few more builtin join conditions available
 
 Grouping data:
 ```php
-$results = \PluginEver\QueryBuilder\Query::table('posts')
-                                        ->group_by('post_status')
-                                        ->get();
+$results = $query->select('*')
+                 ->from('posts')
+                ->group_by('post_status')
+                ->get();
 ```
 
 ### Having
 Group by with having data:
 ```php
-$results = \PluginEver\QueryBuilder\Query::table('posts')
-                                        ->group_by('post_status')
-                                        ->having('count(ID)>1')
-                                        ->get();
+$results = $query->select('*')
+                 ->from('posts')
+                ->group_by('post_status')
+                ->having('count(ID)>1')
+                ->get();
 ```
 
 ### Ordering
 Ordering data:
 ```php
-$results = \PluginEver\QueryBuilder\Query::table('posts')
-                                        ->order_by('post_title', 'DESC')
-                                        ->get();
+$results = $query->select('*')
+                 ->from('posts')
+                ->order_by('post_title', 'DESC')
+                ->get();
 ```
 
 ### Limiting data
 Limit and offset:
 ```php
-$results = \PluginEver\QueryBuilder\Query::table('posts')
-                                        ->limit(20, 10)
-                                        ->get();
+$results = $query->select('*')
+                 ->from('posts')
+                ->limit(20, 10)
+                ->get();
 ```
 Only limit
 ```php
-$results = \PluginEver\QueryBuilder\Query::table('posts')
-                                        ->limit(20)
-                                        ->get();
+$results = $query->select('*')
+                 ->from('posts')
+                ->limit(20)
+                ->get();
 ```
 Offset as separate
 ```php
-$results = \PluginEver\QueryBuilder\Query::table('posts')
-                                        ->limit(20)
-                                        ->offset(10)
-                                        ->get();
+$results = $query->select('*')
+                 ->from('posts')
+                ->limit(20)
+                ->offset(10)
+                ->get();
 ```
 
 ### Pagination
 shortcut of limit and offset
 ```php
-$results = \PluginEver\QueryBuilder\Query::table('posts')
-                                        ->page(1, 20)//page number & page size
-                                        ->get();
+$results = $query->select('*')
+                 ->from('posts')
+                ->page(1, 20)//page number & page size
+                ->get();
 ```
 
 ### Find 
 find item with column value
 ```php
-$results = \PluginEver\QueryBuilder\Query::table('posts')
-                                        ->find(1, 'ID');
+$results = $query->select('*')
+                 ->from('posts')
+                 ->find(1, 'ID');
 ```
 
 
 ### First 
 Get first item from the posts table
 ```php
-$results = \PluginEver\QueryBuilder\Query::table('posts')
-                                        ->first();
+$results = $query->select('*')
+                 ->from('posts')
+                 ->first();
 ```
 
 ### Last 
 Get last item from the posts table
 ```php
-$results = \PluginEver\QueryBuilder\Query::table('posts')
-                                        ->last();
+$results = $query->select('*')
+                 ->from('posts')
+                 ->last();
 ```
 
 ### Counting
 count total rows
 ```php
-$results = \PluginEver\QueryBuilder\Query::table('posts')
-                                        ->count();
+$results = $query->select('*')
+                 ->from('posts')
+                 ->count();
 ```
 
 ### toSql
 Out the query instead of executing
 ```php
-$results = \PluginEver\QueryBuilder\Query::table('posts as p')
-                                        ->join('users as u',  'p.post_author', 'u.ID')
-                                        ->join('usermeta um', function($q) {
-                                              $q->where('um.meta_key', 'first_name');
-                                              $q->where('um.met_value', 'like', '%sultan%');
-                                          })
-                                        ->toSql();
+$results = $query->from('posts as p')
+                ->join('users as u',  'p.post_author', 'u.ID')
+                ->join('usermeta um', function($q) {
+                      $q->where('um.meta_key', 'first_name');
+                      $q->where('um.met_value', 'like', '%sultan%');
+                  })
+                ->toSql();
+```
+
+### Update 
+Update a row
+```php
+$results = $query->table('posts')
+                 ->where('ID', 20)
+                 ->update(['post_title' => 'updated']);
 ```
 
 ### Delete 
 Delete a row
 ```php
-$results = \PluginEver\QueryBuilder\Query::table('posts')
-                                        ->where('ID', 20)
-                                        ->delete();
+$results = $query->from('posts')
+                ->where('ID', 20)
+                ->delete();
 ```
 
 ### Search
 Search a value from columns
 ```php
-$results = \PluginEver\QueryBuilder\Query::table('posts')
-                                        ->search('Hello Word', array('post_title', 'post_content')) // it will search Hello & World both
-                                        ->delete();
+$results = $query->from('posts')
+                 ->search('Hello Word', array('post_title', 'post_content')) // it will search Hello & World both
+                 ->delete();
 ```
 
 ## License
