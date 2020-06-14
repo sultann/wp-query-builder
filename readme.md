@@ -154,12 +154,6 @@ There are few more builtin join conditions available
 - `rightJoin()`
 - `innerJoin()`
 - `outerJoin()`
-- `whereNotNull()`
-- `orWhereNull()`
-- `orWhereNotNull()`
-- `whereBetween()`
-- `whereNotBetween()`
-- `whereDateBetween()`
 
 ### Grouping
 
