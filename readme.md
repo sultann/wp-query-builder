@@ -22,7 +22,7 @@ $ composer require sultann/wp-query-builder
 ## Documentation 💡
 ### Initialize
 Initialize query builder. init method takes a string argument using that later you can do action/filter based on your requirement.
-without argument
+without argument.
 ```php
 $query = \PluginEver\QueryBuilder\Query::init();
 ```
@@ -33,7 +33,7 @@ $query = \PluginEver\QueryBuilder\Query::init('query_users');
 
 ### Select
 This will build the query, execute and returns all users from users table with applying table prefix automatically.
-by default it select all(*) but you can define what to select from the query;
+by default it select all(*) but you can define what to select from the query; If you are selecting all then you can omit the select statement.
 ```php
 $results = $query->select('*')
                  ->from('users')
