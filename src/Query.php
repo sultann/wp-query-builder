@@ -1151,7 +1151,7 @@ class Query {
 		$this->_query_where( $conditions );
 
 		if ( empty( trim( $conditions ) ) ) {
-			false;
+			return false;
 		}
 
 		$fields = array();
