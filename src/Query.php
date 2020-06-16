@@ -519,8 +519,8 @@ class Query {
 			return $this;
 		}
 
-		// when param2 is null we replace param2 with param one as the
-		// value holder and make param1 to the = operator.
+		// when $referenceKey is null we replace $operator with $referenceKey one as the
+		// value holder and make $operator to the = operator.
 		if ( is_null( $referenceKey ) ) {
 			$referenceKey = $operator;
 			$operator = '=';
