@@ -59,8 +59,10 @@ class Query {
 	 * Static constructor.
 	 *
 	 *
-	 * @since 1.0.0
+	 * @param null $id
 	 *
+	 * @return Query
+	 * @since 1.0.0
 	 */
 	public static function init( $id = null ) {
 		$builder     = new self();
@@ -89,10 +91,11 @@ class Query {
 	 * @param string $name
 	 * @param bool $add_prefix
 	 *
+	 * @return Query
+	 * @return Query
 	 * @since 1.0.0
-	 *
 	 */
-	public function table( $name, $add_prefix = true ) {
+	public function table( string $name, bool $add_prefix = true ) {
 		global $wpdb;
 		$table      = ( $add_prefix ? $wpdb->prefix : '' ) . $name;
 		$this->from = $table;
@@ -126,6 +129,8 @@ class Query {
 	 * @param $columns
 	 * @param $joint
 	 *
+	 * @return Query
+	 * @return Query
 	 * @since 1.0.0
 	 */
 	public function search( $search, $columns, $joint = 'AND' ) {
@@ -161,6 +166,7 @@ class Query {
 	 * @param string $joint the where type ( and, or )
 	 *
 	 * @return Query The current query builder.
+	 * @throws \Exception
 	 */
 	public function where( $column, $param1 = null, $param2 = null, $joint = 'and' ) {
 		global $wpdb;
@@ -404,7 +410,11 @@ class Query {
 	 *
 	 * @param string $column
 	 *
+	 * @param $min
+	 * @param $max
+	 *
 	 * @return Query The current query builder.
+	 * @throws \Exception
 	 */
 	public function whereBetween( $column, $min, $max ) {
 		return $this->where( $column, 'BETWEEN', array( $min, $max ) );
@@ -417,7 +427,10 @@ class Query {
 	 *
 	 * @param string $column
 	 *
+	 * @param $min
+	 * @param $max
 	 * @return Query The current query builder.
+	 * @throws \Exception
 	 */
 	public function whereNotBetween( $column, $min, $max ) {
 		return $this->where( $column, 'NOT BETWEEN', array( $min, $max ) );
@@ -430,7 +443,10 @@ class Query {
 	 *
 	 * @param string $column
 	 *
+	 * @param $start
+	 * @param $end
 	 * @return Query The current query builder.
+	 * @throws \Exception
 	 */
 	public function whereDateBetween( $column, $start, $end ) {
 		global $wpdb;
@@ -446,6 +462,8 @@ class Query {
 	 * @param $query
 	 * @param string $joint
 	 *
+	 * @return Query
+	 * @return Query
 	 * @since 1.0.1
 	 */
 	public function whereRaw( $query, $joint = 'AND' ) {
@@ -472,6 +490,7 @@ class Query {
 	 * @param bool $add_prefix Add table prefix or not
 	 *
 	 * @return Query The current query builder.
+	 * @throws \Exception
 	 */
 	public function join( $table, $localKey, $operator = null, $referenceKey = null, $type = 'left', $joint = 'AND', $add_prefix = true ) {
 		global $wpdb;
@@ -584,6 +603,8 @@ class Query {
 	 * @param $query
 	 * @param string $joint
 	 *
+	 * @return Query
+	 * @return Query
 	 * @since 1.0.1
 	 */
 	public function joinRaw( $query, $joint = 'AND' ) {
@@ -653,9 +674,8 @@ class Query {
 	 * @param string $direction
 	 *
 	 * @return Query this for chaining.
-	 * @throws Exception
+	 * @throws \Exception
 	 * @since 1.0.0
-	 *
 	 */
 	public function order_by( $key, $direction = 'ASC' ) {
 		$direction = trim( strtoupper( $direction ) );
@@ -786,7 +806,7 @@ class Query {
 	/**
 	 * Returns results from builder statements.
 	 *
-	 * @param int $output WPDB output type.
+	 * @param string $output WPDB output type.
 	 * @param callable $row_map Function callable to filter or map results to.
 	 * @param bool $calc_rows Flag that indicates to SQL if rows should be calculated or not.
 	 *
@@ -794,7 +814,6 @@ class Query {
 	 * @since 1.0.0
 	 *
 	 * @global object $wpdb
-	 *
 	 */
 	public function get( $output = OBJECT, $row_map = null, $calc_rows = false ) {
 		global $wpdb;
@@ -879,7 +898,7 @@ class Query {
 	/**
 	 * Just get a single value from the result
 	 *
-	 * @param string $column The index of the column.
+	 * @param int $column The index of the column.
 	 * @param bool $calc_rows Flag that indicates to SQL if rows should be calculated or not.
 	 *
 	 * @return mixed The columns value
@@ -1139,11 +1158,12 @@ class Query {
 
 	/**
 	 * Update
+	 * @global object $wpdb
+	 *
 	 * @return bool
 	 * @global object $wpdb
 	 *
 	 * @since 1.0.0
-	 *
 	 */
 	public function update( $data ) {
 		global $wpdb;
@@ -1187,7 +1207,7 @@ class Query {
 
 		if ( false !== $wpdb->insert( trim( $this->from ), $data, $format ) ) {
 			return $wpdb->insert_id;
-		};
+		}
 
 		return false;
 	}
