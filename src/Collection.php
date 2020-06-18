@@ -67,12 +67,10 @@ class Collection implements ArrayAccess, Arrayable, IteratorAggregate, JSONable,
 	 *
 	 * @param callable $callback
 	 *
-	 * @return $this
+	 * @return static
 	 */
 	public function each( callable $callback ) {
-		array_map( $callback, $this->items );
-
-		return $this;
+		return new static( array_map( $callback, $this->items ) );
 	}
 
 	/**
