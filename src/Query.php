@@ -225,7 +225,7 @@ class Query {
 		// Between?
 		if ( is_array( $param2 ) && strpos( $param1, 'BETWEEN' ) !== false ) {
 			$min = isset( $param2[0] ) ? $param2[0] : false;
-			$max = isset( $param2[1] ) ? $param2[1] : false;
+			$max = isset( $param2[1] ) ? $param2[1] : $min;
 			if ( ! $min || ! $max ) {
 				$this->exception( "BETWEEN min or max is missing" );
 			}
