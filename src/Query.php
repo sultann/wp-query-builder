@@ -205,7 +205,9 @@ class Query {
 
 		// when param2 is null we replace param2 with param one as the
 		// value holder and make param1 to the = operator.
-		if ( is_null( $param2 ) ) {
+		// However, if param1 is either 'is' or 'is not' we need to leave param2 as null.
+		// This is used for the whereNull() and whereNotNull() methods.
+		if ( is_null( $param2 ) && ! in_array( $param1, [ 'is', 'is not' ], true ) ) {
 			$param2 = $param1;
 			$param1 = '=';
 		}
